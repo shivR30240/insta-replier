@@ -1,0 +1,1298 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ReplyBot — Instagram Comment & DM Manager</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Clash+Display:wght@400;500;600;700&family=Cabinet+Grotesk:wght@300;400;500;700&display=swap"
+    rel="stylesheet" />
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg: #f5f2eb;
+      --surface: #ffffff;
+      --surface2: #f0ece3;
+      --border: #e2ddd4;
+      --ink: #1a1714;
+      --ink2: #6b6457;
+      --accent: #e8460a;
+      --accent2: #2563eb;
+      --green: #16a34a;
+      --yellow: #ca8a04;
+      --red: #dc2626;
+      --purple: #7c3aed;
+      --shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 4px 16px rgba(0, 0, 0, 0.06);
+      --shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.12);
+      --radius: 14px;
+    }
+
+    html,
+    body {
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: 'Cabinet Grotesk', sans-serif;
+    }
+
+    .shell {
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      background: var(--ink);
+      color: #fff;
+      padding: 32px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+    }
+
+    .sidebar-logo {
+      font-family: 'Clash Display', sans-serif;
+      font-size: 1.35rem;
+      font-weight: 700;
+      margin-bottom: 28px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      background: var(--accent);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 0.88rem;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.55);
+      transition: all 0.15s;
+      border: none;
+      background: none;
+      width: 100%;
+      text-align: left;
+    }
+
+    .nav-item:hover {
+      background: rgba(255, 255, 255, 0.07);
+      color: #fff;
+    }
+
+    .nav-item.active {
+      background: rgba(232, 70, 10, 0.2);
+      color: #fff;
+    }
+
+    .nav-item .nav-icon {
+      font-size: 16px;
+      width: 20px;
+      text-align: center;
+    }
+
+    .sidebar-divider {
+      height: 1px;
+      background: rgba(255, 255, 255, 0.1);
+      margin: 12px 0;
+    }
+
+    .sidebar-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.3);
+      padding: 0 14px;
+      margin-bottom: 4px;
+    }
+
+    .main {
+      padding: 36px 40px;
+      overflow-y: auto;
+    }
+
+    .page {
+      display: none;
+    }
+
+    .page.active {
+      display: block;
+    }
+
+    .page-header {
+      margin-bottom: 28px;
+    }
+
+    .page-title {
+      font-family: 'Clash Display', sans-serif;
+      font-size: 1.8rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 4px;
+    }
+
+    .page-sub {
+      color: var(--ink2);
+      font-size: 0.9rem;
+    }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 14px;
+      margin-bottom: 28px;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      box-shadow: var(--shadow);
+    }
+
+    .stat-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--ink2);
+      margin-bottom: 8px;
+    }
+
+    .stat-value {
+      font-family: 'Clash Display', sans-serif;
+      font-size: 1.8rem;
+      font-weight: 700;
+    }
+
+    .stat-value.accent {
+      color: var(--accent);
+    }
+
+    .stat-value.purple {
+      color: var(--purple);
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+
+    .card-head {
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--surface2);
+    }
+
+    .card-title {
+      font-family: 'Clash Display', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
+
+    .card-body {
+      padding: 24px;
+    }
+
+    .field {
+      margin-bottom: 16px;
+    }
+
+    .field label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--ink2);
+      margin-bottom: 6px;
+    }
+
+    input[type="text"],
+    textarea,
+    select {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 11px 14px;
+      font-family: 'Cabinet Grotesk', sans-serif;
+      font-size: 0.92rem;
+      color: var(--ink);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    input:focus,
+    textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(232, 70, 10, 0.1);
+    }
+
+    textarea {
+      min-height: 80px;
+      resize: vertical;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 10px 20px;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      font-family: 'Cabinet Grotesk', sans-serif;
+      font-size: 0.88rem;
+      font-weight: 700;
+      transition: all 0.15s;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(232, 70, 10, 0.3);
+    }
+
+    .btn-primary:hover {
+      background: #c93808;
+      transform: translateY(-1px);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-secondary {
+      background: var(--surface2);
+      color: var(--ink);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      background: var(--border);
+    }
+
+    .btn-green {
+      background: var(--green);
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(22, 163, 74, 0.3);
+    }
+
+    .btn-green:hover {
+      background: #15803d;
+    }
+
+    .btn-green:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .btn-purple {
+      background: var(--purple);
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(124, 58, 237, 0.3);
+    }
+
+    .btn-purple:hover {
+      background: #6d28d9;
+    }
+
+    .btn-sm {
+      padding: 7px 14px;
+      font-size: 0.82rem;
+    }
+
+    .context-box {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      font-size: 0.88rem;
+      line-height: 1.6;
+      color: var(--ink2);
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .comments-list,
+    .dm-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .comment-item,
+    .dm-item {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      transition: border-color 0.15s;
+    }
+
+    .comment-item:hover,
+    .dm-item:hover {
+      border-color: var(--accent);
+    }
+
+    .comment-meta,
+    .dm-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .comment-user {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--accent2);
+    }
+
+    .dm-user {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--purple);
+    }
+
+    .comment-time {
+      font-size: 0.75rem;
+      color: var(--ink2);
+    }
+
+    .comment-text,
+    .dm-text {
+      font-size: 0.9rem;
+      line-height: 1.5;
+      color: var(--ink);
+      margin-bottom: 10px;
+    }
+
+    .comment-actions,
+    .dm-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+
+    .reply-preview {
+      background: #fff7f5;
+      border: 1px solid rgba(232, 70, 10, 0.2);
+      border-radius: 10px;
+      padding: 14px;
+      font-size: 0.9rem;
+      line-height: 1.6;
+      color: var(--ink);
+      font-style: italic;
+      margin-top: 10px;
+    }
+
+    .dm-reply-preview {
+      background: #f5f3ff;
+      border: 1px solid rgba(124, 58, 237, 0.2);
+      border-radius: 10px;
+      padding: 14px;
+      font-size: 0.9rem;
+      line-height: 1.6;
+      color: var(--ink);
+      font-style: italic;
+      margin-top: 10px;
+    }
+
+    .reply-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 5px;
+    }
+
+    .dm-reply-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--purple);
+      margin-bottom: 5px;
+    }
+
+    .reel-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: rgba(232, 70, 10, 0.1);
+      color: var(--accent);
+      border-radius: 20px;
+      padding: 2px 10px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .log-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+
+    .log-table th {
+      text-align: left;
+      padding: 10px 14px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--ink2);
+      border-bottom: 2px solid var(--border);
+      background: var(--surface2);
+    }
+
+    .log-table td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+      line-height: 1.4;
+    }
+
+    .log-table tr:hover td {
+      background: var(--surface2);
+    }
+
+    .log-table .truncate {
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 9999;
+    }
+
+    .toast {
+      background: var(--ink);
+      color: #fff;
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-size: 0.88rem;
+      box-shadow: var(--shadow-lg);
+      animation: slideIn 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      max-width: 320px;
+    }
+
+    .toast.success {
+      border-left: 3px solid var(--green);
+    }
+
+    .toast.error {
+      border-left: 3px solid var(--red);
+    }
+
+    .toast.info {
+      border-left: 3px solid var(--accent2);
+    }
+
+    .spin {
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top-color: currentColor;
+      border-radius: 50%;
+      animation: rotate 0.7s linear infinite;
+      display: inline-block;
+      flex-shrink: 0;
+    }
+
+    .loading-overlay {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 20px;
+      color: var(--ink2);
+      font-size: 0.9rem;
+    }
+
+    .spin-dark {
+      width: 18px;
+      height: 18px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: rotate 0.7s linear infinite;
+    }
+
+    .empty {
+      text-align: center;
+      padding: 48px 24px;
+      color: var(--ink2);
+    }
+
+    .empty-icon {
+      font-size: 2.5rem;
+      margin-bottom: 12px;
+    }
+
+    .empty-text {
+      font-size: 0.92rem;
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .convo-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .convo-item {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      cursor: pointer;
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .convo-item:hover,
+    .convo-item.selected {
+      border-color: var(--purple);
+      background: rgba(124, 58, 237, 0.04);
+    }
+
+    .convo-name {
+      font-weight: 700;
+      font-size: 0.9rem;
+    }
+
+    .convo-time {
+      font-size: 0.75rem;
+      color: var(--ink2);
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateX(20px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    @keyframes rotate {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="shell">
+
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <div class="logo-icon">💬</div>
+        ReplyBot
+      </div>
+      <div class="sidebar-label">Main</div>
+      <button class="nav-item active" onclick="showPage('dashboard')"><span class="nav-icon">📊</span>
+        Dashboard</button>
+      <button class="nav-item" onclick="showPage('analyzer')"><span class="nav-icon">🔍</span> Post Analyzer</button>
+      <button class="nav-item" onclick="showPage('comments')"><span class="nav-icon">💬</span> Comment Replier</button>
+      <button class="nav-item" onclick="showPage('dm')"><span class="nav-icon">📩</span> DM Replier</button>
+      <div class="sidebar-divider"></div>
+      <div class="sidebar-label">History</div>
+      <button class="nav-item" onclick="showPage('logs')"><span class="nav-icon">📋</span> Comment Logs</button>
+      <button class="nav-item" onclick="showPage('dmlogs')"><span class="nav-icon">📨</span> DM Logs</button>
+      <div class="sidebar-divider"></div>
+      <div class="sidebar-label">Config</div>
+      <button class="nav-item" onclick="showPage('settings')"><span class="nav-icon">⚙️</span> Settings</button>
+    </aside>
+
+    <main class="main">
+
+      <!-- DASHBOARD -->
+      <div class="page active" id="page-dashboard">
+        <div class="page-header">
+          <h1 class="page-title">Dashboard</h1>
+          <p class="page-sub">Overview of your Instagram reply activity</p>
+        </div>
+        <div class="stats-row">
+          <div class="stat-card">
+            <div class="stat-label">Comment Replies</div>
+            <div class="stat-value accent" id="stat-total">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Comments Today</div>
+            <div class="stat-value" id="stat-today">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Posts Handled</div>
+            <div class="stat-value" id="stat-posts">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">DM Replies</div>
+            <div class="stat-value purple" id="stat-dm-total">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">DMs Today</div>
+            <div class="stat-value" id="stat-dm-today">—</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head"><span class="card-title">Recent Comment Replies</span><button
+              class="btn btn-secondary btn-sm" onclick="showPage('logs')">View all →</button></div>
+          <div class="card-body" style="padding:0">
+            <table class="log-table">
+              <thead>
+                <tr>
+                  <th>Commenter</th>
+                  <th>Comment</th>
+                  <th>Reply</th>
+                  <th>Time</th>
+                </tr>
+              </thead>
+              <tbody id="dashboard-log-body">
+                <tr>
+                  <td colspan="4">
+                    <div class="loading-overlay">
+                      <div class="spin-dark"></div> Loading...
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head"><span class="card-title">Recent DM Replies</span><button
+              class="btn btn-secondary btn-sm" onclick="showPage('dmlogs')">View all →</button></div>
+          <div class="card-body" style="padding:0">
+            <table class="log-table">
+              <thead>
+                <tr>
+                  <th>Sender</th>
+                  <th>Message</th>
+                  <th>Reply</th>
+                  <th>Time</th>
+                </tr>
+              </thead>
+              <tbody id="dashboard-dm-body">
+                <tr>
+                  <td colspan="4">
+                    <div class="loading-overlay">
+                      <div class="spin-dark"></div> Loading...
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- POST ANALYZER -->
+      <div class="page" id="page-analyzer">
+        <div class="page-header">
+          <h1 class="page-title">Post Analyzer</h1>
+          <p class="page-sub">Fetch caption + audio transcript for Reels</p>
+        </div>
+        <div class="card">
+          <div class="card-head"><span class="card-title">Enter Post ID</span></div>
+          <div class="card-body">
+            <div class="field"><label>Instagram Post ID</label><input type="text" id="analyzerPostId"
+                placeholder="e.g. 18023751985123456" /></div>
+            <button class="btn btn-primary" onclick="analyzePost()" id="analyzeBtn">🔍 Analyze Post</button>
+          </div>
+        </div>
+        <div id="analyzerResult" style="display:none">
+          <div class="card">
+            <div class="card-head"><span class="card-title">Post Content</span></div>
+            <div class="card-body">
+              <div id="analyzerMediaBadge"></div>
+              <div class="field"><label>Caption</label>
+                <div class="context-box" id="analyzerCaption">—</div>
+              </div>
+              <div id="analyzerTranscriptWrap" style="display:none">
+                <div class="field"><label>🎙️ Audio Transcript</label>
+                  <div class="context-box" id="analyzerTranscript">—</div>
+                </div>
+              </div>
+              <button class="btn btn-primary" style="margin-top:8px" onclick="goToCommentsFromAnalyzer()">💬 Reply to
+                Comments →</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- COMMENT REPLIER -->
+      <div class="page" id="page-comments">
+        <div class="page-header">
+          <h1 class="page-title">Comment Replier</h1>
+          <p class="page-sub">Load comments, generate Gemini replies, and post them</p>
+        </div>
+        <div class="two-col" style="margin-bottom:20px">
+          <div class="card" style="margin:0">
+            <div class="card-head"><span class="card-title">Post ID</span></div>
+            <div class="card-body">
+              <div class="field"><label>Instagram Post ID</label><input type="text" id="replyPostId"
+                  placeholder="Paste post ID here" /></div>
+              <div style="display:flex;gap:8px">
+                <button class="btn btn-secondary btn-sm" onclick="loadPostContext()">📄 Load Context</button>
+                <button class="btn btn-primary btn-sm" onclick="loadComments()">💬 Load Comments</button>
+              </div>
+            </div>
+          </div>
+          <div class="card" style="margin:0">
+            <div class="card-head"><span class="card-title">Post Context</span></div>
+            <div class="card-body" style="padding:14px">
+              <div class="context-box" id="contextSummary" style="min-height:80px">Load a post to see its context here…
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head"><span class="card-title">Comments</span><span id="commentCount"
+              style="font-size:0.8rem;color:var(--ink2)"></span></div>
+          <div class="card-body" style="padding:16px">
+            <div id="commentsList">
+              <div class="empty">
+                <div class="empty-icon">💬</div>
+                <div class="empty-text">Enter a Post ID and click "Load Comments"</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DM REPLIER -->
+      <div class="page" id="page-dm">
+        <div class="page-header">
+          <h1 class="page-title">DM Replier</h1>
+          <p class="page-sub">Reply to direct messages and shared Reels in DMs using Gemini</p>
+        </div>
+        <div class="two-col" style="margin-bottom:20px">
+          <div class="card" style="margin:0">
+            <div class="card-head">
+              <span class="card-title">Conversations</span>
+              <button class="btn btn-secondary btn-sm" onclick="loadConversations()">🔄 Refresh</button>
+            </div>
+            <div class="card-body" style="padding:12px">
+              <div id="convoList">
+                <div class="loading-overlay">
+                  <div class="spin-dark"></div> Loading conversations…
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="card" style="margin:0">
+            <div class="card-head"><span class="card-title">Messages</span><span id="dmConvoName"
+                style="font-size:0.8rem;color:var(--ink2)"></span></div>
+            <div class="card-body" style="padding:12px">
+              <div id="dmMessagesList">
+                <div class="empty">
+                  <div class="empty-icon">📩</div>
+                  <div class="empty-text">Select a conversation to view messages</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- COMMENT LOGS -->
+      <div class="page" id="page-logs">
+        <div class="page-header">
+          <h1 class="page-title">Comment Logs</h1>
+          <p class="page-sub">All comment replies stored in Cloud SQL</p>
+        </div>
+        <div class="card">
+          <div class="card-head"><span class="card-title">All Comment Replies</span><button
+              class="btn btn-secondary btn-sm" onclick="loadLogs()">🔄 Refresh</button></div>
+          <div class="card-body" style="padding:0">
+            <table class="log-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Post ID</th>
+                  <th>Commenter</th>
+                  <th>Comment</th>
+                  <th>Reply</th>
+                  <th>Time</th>
+                </tr>
+              </thead>
+              <tbody id="logsTableBody">
+                <tr>
+                  <td colspan="6">
+                    <div class="loading-overlay">
+                      <div class="spin-dark"></div> Loading...
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- DM LOGS -->
+      <div class="page" id="page-dmlogs">
+        <div class="page-header">
+          <h1 class="page-title">DM Logs</h1>
+          <p class="page-sub">All DM replies stored in Cloud SQL</p>
+        </div>
+        <div class="card">
+          <div class="card-head"><span class="card-title">All DM Replies</span><button class="btn btn-secondary btn-sm"
+              onclick="loadDmLogs()">🔄 Refresh</button></div>
+          <div class="card-body" style="padding:0">
+            <table class="log-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Sender</th>
+                  <th>Message</th>
+                  <th>Reply</th>
+                  <th>Reel?</th>
+                  <th>Time</th>
+                </tr>
+              </thead>
+              <tbody id="dmLogsTableBody">
+                <tr>
+                  <td colspan="6">
+                    <div class="loading-overlay">
+                      <div class="spin-dark"></div> Loading...
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- SETTINGS -->
+      <div class="page" id="page-settings">
+        <div class="page-header">
+          <h1 class="page-title">Settings</h1>
+          <p class="page-sub">Configure API keys in your <code>.env</code> file</p>
+        </div>
+        <div class="card">
+          <div class="card-head"><span class="card-title">Environment Variables</span></div>
+          <div class="card-body">
+            <div style="display:grid;gap:16px">
+              <div>
+                <div class="stat-label">Instagram Graph API</div><code
+                  style="font-size:0.82rem;color:var(--ink2)">IG_ACCESS_TOKEN, IG_USER_ID, IG_PAGE_ID</code>
+              </div>
+              <div>
+                <div class="stat-label">Google Gemini</div><code
+                  style="font-size:0.82rem;color:var(--ink2)">GEMINI_API_KEY, GEMINI_TONE, BRAND_NAME</code>
+              </div>
+              <div>
+                <div class="stat-label">Cloud SQL (MySQL)</div><code
+                  style="font-size:0.82rem;color:var(--ink2)">CLOUD_SQL_HOST, CLOUD_SQL_PORT, CLOUD_SQL_USER, CLOUD_SQL_PASSWORD, CLOUD_SQL_DATABASE</code>
+              </div>
+              <div>
+                <div class="stat-label">Webhook</div><code
+                  style="font-size:0.82rem;color:var(--ink2)">WEBHOOK_VERIFY_TOKEN</code>
+              </div>
+            </div>
+            <div
+              style="margin-top:20px;background:rgba(124,58,237,0.06);border:1px solid rgba(124,58,237,0.15);border-radius:10px;padding:16px">
+              <div class="stat-label" style="color:var(--purple);margin-bottom:8px">DM Permissions Required</div>
+              <p style="font-size:0.85rem;color:var(--ink2);line-height:1.7">
+                Add these in Meta Developer Console → Your App → Permissions:<br>
+                <strong>instagram_manage_messages</strong> · <strong>pages_messaging</strong>
+              </p>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head"><span class="card-title">Webhook Setup</span></div>
+          <div class="card-body">
+            <p style="font-size:0.88rem;color:var(--ink2);line-height:1.7">
+              1. Meta Developer Console → Your App → Webhooks<br>
+              2. Subscribe to <strong>instagram → comments</strong> (for comment auto-reply)<br>
+              3. Subscribe to <strong>instagram → messages</strong> (for DM auto-reply)<br>
+              4. Callback URL: <code>https://your-domain.com/webhook</code><br>
+              5. Verify Token: same as <code>WEBHOOK_VERIFY_TOKEN</code> in .env
+            </p>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script>
+    let currentPostContext = null;
+    let analyzedPostId = null;
+    let selectedConvoId = null;
+    let selectedConvoName = null;
+    window._comments = {};
+    window._dmMessages = {};
+
+    // ── Navigation ─────────────────────────────────────────────────────────
+    function showPage(name) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      document.getElementById('page-' + name).classList.add('active');
+      document.querySelectorAll('.nav-item').forEach(btn => {
+        if (btn.getAttribute('onclick') && btn.getAttribute('onclick').includes("'" + name + "'")) btn.classList.add('active');
+      });
+      if (name === 'logs') loadLogs();
+      if (name === 'dmlogs') loadDmLogs();
+      if (name === 'dashboard') loadStats();
+      if (name === 'dm') loadConversations();
+    }
+
+    // ── Toast ──────────────────────────────────────────────────────────────
+    function toast(msg, type = 'info') {
+      const el = document.createElement('div');
+      el.className = `toast ${type}`;
+      const icons = { success: '✅', error: '❌', info: 'ℹ️' };
+      el.innerHTML = `<span>${icons[type]}</span> ${msg}`;
+      document.getElementById('toastContainer').appendChild(el);
+      setTimeout(() => el.remove(), 4000);
+    }
+
+    // ── Stats ──────────────────────────────────────────────────────────────
+    async function loadStats() {
+      try {
+        const res = await fetch('/api/stats');
+        const d = await res.json();
+        document.getElementById('stat-total').textContent = d.total_replies ?? '—';
+        document.getElementById('stat-today').textContent = d.replies_today ?? '—';
+        document.getElementById('stat-posts').textContent = d.posts_handled ?? '—';
+        document.getElementById('stat-dm-total').textContent = d.dm_total ?? '—';
+        document.getElementById('stat-dm-today').textContent = d.dm_today ?? '—';
+      } catch (e) { console.error(e); }
+      loadDashboardLogs();
+      loadDashboardDmLogs();
+    }
+
+    async function loadDashboardLogs() {
+      try {
+        const res = await fetch('/api/logs');
+        const data = await res.json();
+        const rows = (data.logs || []).slice(0, 5);
+        const body = document.getElementById('dashboard-log-body');
+        if (!rows.length) { body.innerHTML = '<tr><td colspan="4"><div class="empty" style="padding:16px"><div class="empty-text">No replies yet</div></div></td></tr>'; return; }
+        body.innerHTML = rows.map(r => `<tr><td><strong>@${esc(r.commenter)}</strong></td><td class="truncate">${esc(r.comment_text)}</td><td class="truncate">${esc(r.reply_text)}</td><td style="color:var(--ink2);font-size:0.8rem">${fmtDate(r.created_at)}</td></tr>`).join('');
+      } catch (e) { console.error(e); }
+    }
+
+    async function loadDashboardDmLogs() {
+      try {
+        const res = await fetch('/api/dm/logs');
+        const data = await res.json();
+        const rows = (data.logs || []).slice(0, 5);
+        const body = document.getElementById('dashboard-dm-body');
+        if (!rows.length) { body.innerHTML = '<tr><td colspan="4"><div class="empty" style="padding:16px"><div class="empty-text">No DM replies yet</div></div></td></tr>'; return; }
+        body.innerHTML = rows.map(r => `<tr><td><strong>${esc(r.sender_name)}</strong></td><td class="truncate">${esc(r.message_text)}</td><td class="truncate">${esc(r.reply_text)}</td><td style="color:var(--ink2);font-size:0.8rem">${fmtDate(r.created_at)}</td></tr>`).join('');
+      } catch (e) { console.error(e); }
+    }
+
+    // ── Analyzer ───────────────────────────────────────────────────────────
+    async function analyzePost() {
+      const postId = document.getElementById('analyzerPostId').value.trim();
+      if (!postId) { toast('Enter a Post ID', 'error'); return; }
+      const btn = document.getElementById('analyzeBtn');
+      btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Analyzing…';
+      try {
+        const res = await fetch('/api/post-context', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ post_id: postId }) });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        analyzedPostId = postId; currentPostContext = data;
+        const badges = { VIDEO: '🎬 Reel', IMAGE: '📸 Photo', CAROUSEL_ALBUM: '🖼️ Carousel' };
+        const bClasses = { VIDEO: 'badge-video', IMAGE: 'badge-image', CAROUSEL_ALBUM: 'badge-carousel' };
+        document.getElementById('analyzerMediaBadge').innerHTML = `<span class="reel-badge">${badges[data.media_type] || data.media_type}</span>`;
+        document.getElementById('analyzerCaption').textContent = data.caption || '(No caption)';
+        document.getElementById('analyzerResult').style.display = 'block';
+        if (data.transcript) { document.getElementById('analyzerTranscriptWrap').style.display = 'block'; document.getElementById('analyzerTranscript').textContent = data.transcript; }
+        else { document.getElementById('analyzerTranscriptWrap').style.display = 'none'; }
+        toast('Post analyzed!', 'success');
+      } catch (e) { toast(e.message || 'Error', 'error'); }
+      finally { btn.disabled = false; btn.innerHTML = '🔍 Analyze Post'; }
+    }
+
+    function goToCommentsFromAnalyzer() {
+      if (!analyzedPostId) return;
+      document.getElementById('replyPostId').value = analyzedPostId;
+      showPage('comments'); loadPostContext(); loadComments();
+    }
+
+    // ── Comment Replier ────────────────────────────────────────────────────
+    async function loadPostContext() {
+      const postId = document.getElementById('replyPostId').value.trim();
+      if (!postId) { toast('Enter a Post ID', 'error'); return; }
+      document.getElementById('contextSummary').textContent = 'Loading…';
+      try {
+        const res = await fetch('/api/post-context', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ post_id: postId }) });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        currentPostContext = data;
+        document.getElementById('contextSummary').textContent = data.summary || '(No context)';
+        toast('Context loaded', 'success');
+      } catch (e) { document.getElementById('contextSummary').textContent = 'Failed to load context.'; toast(e.message, 'error'); }
+    }
+
+    async function loadComments() {
+      const postId = document.getElementById('replyPostId').value.trim();
+      if (!postId) { toast('Enter a Post ID', 'error'); return; }
+      const list = document.getElementById('commentsList');
+      list.innerHTML = '<div class="loading-overlay"><div class="spin-dark"></div> Fetching comments…</div>';
+      try {
+        const res = await fetch('/api/comments', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ post_id: postId }) });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        const comments = data.comments || [];
+        document.getElementById('commentCount').textContent = `${comments.length} comment${comments.length !== 1 ? 's' : ''}`;
+        if (!comments.length) { list.innerHTML = '<div class="empty"><div class="empty-icon">🤐</div><div class="empty-text">No comments found</div></div>'; return; }
+        window._comments = {};
+        comments.forEach(c => { window._comments[c.id] = c; });
+        const container = document.createElement('div');
+        container.className = 'comments-list';
+        comments.forEach(c => {
+          const item = document.createElement('div');
+          item.className = 'comment-item'; item.id = 'citem-' + c.id;
+          item.innerHTML = `<div class="comment-meta"><span class="comment-user">@${esc(c.username)}</span><span class="comment-time">${fmtDate(c.timestamp)}</span></div><div class="comment-text">${esc(c.text)}</div><div id="reply-area-${c.id}"></div><div class="comment-actions" id="actions-${c.id}"></div>`;
+          const actionsDiv = item.querySelector('#actions-' + c.id);
+          const genBtn = document.createElement('button');
+          genBtn.className = 'btn btn-secondary btn-sm'; genBtn.textContent = '✨ Generate Reply';
+          genBtn.onclick = () => generateReply(c.id, c.text, c.username, postId);
+          actionsDiv.appendChild(genBtn);
+          container.appendChild(item);
+        });
+        list.innerHTML = ''; list.appendChild(container);
+      } catch (e) { list.innerHTML = `<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-text">${esc(e.message)}</div></div>`; toast(e.message, 'error'); }
+    }
+
+    async function generateReply(commentId, commentText, commenter, postId) {
+      const area = document.getElementById('reply-area-' + commentId);
+      const actionsDiv = document.getElementById('actions-' + commentId);
+      area.innerHTML = '<div class="loading-overlay" style="padding:10px 0"><div class="spin-dark"></div> Gemini is thinking…</div>';
+      try {
+        const res = await fetch('/api/generate-reply', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ comment_text: commentText, post_context: currentPostContext?.summary || '', commenter }) });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        area.innerHTML = '';
+        const replyBox = document.createElement('div'); replyBox.style.marginBottom = '10px';
+        const lbl = document.createElement('div'); lbl.className = 'reply-label'; lbl.textContent = '✨ Gemini Reply';
+        const replyEl = document.createElement('div'); replyEl.className = 'reply-preview'; replyEl.id = 'reply-text-' + commentId; replyEl.contentEditable = 'true'; replyEl.textContent = data.reply;
+        replyBox.appendChild(lbl); replyBox.appendChild(replyEl); area.appendChild(replyBox);
+        actionsDiv.innerHTML = '';
+        const postBtn = document.createElement('button'); postBtn.className = 'btn btn-green btn-sm'; postBtn.textContent = '📤 Post Reply';
+        postBtn.onclick = () => postReply(commentId, postId, commenter, commentText);
+        const regenBtn = document.createElement('button'); regenBtn.className = 'btn btn-secondary btn-sm'; regenBtn.textContent = '🔄 Regenerate';
+        regenBtn.onclick = () => generateReply(commentId, commentText, commenter, postId);
+        actionsDiv.appendChild(postBtn); actionsDiv.appendChild(regenBtn);
+      } catch (e) { area.innerHTML = `<div style="color:var(--red);font-size:0.85rem;padding:8px 0">Error: ${esc(e.message)}</div>`; toast(e.message, 'error'); }
+    }
+
+    async function postReply(commentId, postId, commenter, commentText) {
+      const replyEl = document.getElementById('reply-text-' + commentId);
+      if (!replyEl) { toast('Reply box not found', 'error'); return; }
+      const replyText = replyEl.innerText.trim();
+      if (!replyText) { toast('Reply is empty', 'error'); return; }
+      const actionsDiv = document.getElementById('actions-' + commentId);
+      const postBtn = actionsDiv ? actionsDiv.querySelector('.btn-green') : null;
+      if (postBtn) { postBtn.disabled = true; postBtn.textContent = '⏳ Posting…'; }
+      try {
+        const res = await fetch('/api/post-reply', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ comment_id: commentId, post_id: postId, reply_text: replyText, comment_text: commentText, commenter, post_context: currentPostContext?.summary || '' }) });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to post reply');
+        const item = document.getElementById('citem-' + commentId);
+        if (item) { item.style.opacity = '0.5'; item.style.pointerEvents = 'none'; }
+        toast('Reply posted & logged! ✅', 'success');
+      } catch (e) { toast('Error: ' + e.message, 'error'); if (postBtn) { postBtn.disabled = false; postBtn.textContent = '📤 Post Reply'; } }
+    }
+
+    // ── DM Replier ─────────────────────────────────────────────────────────
+    async function loadConversations() {
+      const list = document.getElementById('convoList');
+      list.innerHTML = '<div class="loading-overlay"><div class="spin-dark"></div> Loading conversations…</div>';
+      try {
+        const res = await fetch('/api/dm/conversations');
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        const convos = data.conversations || [];
+        if (!convos.length) { list.innerHTML = '<div class="empty"><div class="empty-icon">📭</div><div class="empty-text">No conversations found</div></div>'; return; }
+        const container = document.createElement('div'); container.className = 'convo-list';
+        convos.forEach(c => {
+          const participants = (c.participants?.data || []).map(p => p.name || p.username || 'User').join(', ');
+          const item = document.createElement('div'); item.className = 'convo-item'; item.id = 'convo-' + c.id;
+          item.innerHTML = `<div><div class="convo-name">💬 ${esc(participants)}</div></div><div class="convo-time">${fmtDate(c.updated_time)}</div>`;
+          item.onclick = () => selectConversation(c.id, participants);
+          container.appendChild(item);
+        });
+        list.innerHTML = ''; list.appendChild(container);
+      } catch (e) { list.innerHTML = `<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-text">${esc(e.message)}</div></div>`; toast(e.message, 'error'); }
+    }
+
+    async function selectConversation(convoId, convoName) {
+      selectedConvoId = convoId; selectedConvoName = convoName;
+      document.querySelectorAll('.convo-item').forEach(el => el.classList.remove('selected'));
+      const el = document.getElementById('convo-' + convoId);
+      if (el) el.classList.add('selected');
+      document.getElementById('dmConvoName').textContent = convoName;
+      const msgList = document.getElementById('dmMessagesList');
+      msgList.innerHTML = '<div class="loading-overlay"><div class="spin-dark"></div> Loading messages…</div>';
+      try {
+        const res = await fetch('/api/dm/messages', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ conversation_id: convoId }) });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        const messages = data.messages || [];
+        window._dmMessages = {};
+        messages.forEach(m => { window._dmMessages[m.id] = m; });
+        if (!messages.length) { msgList.innerHTML = '<div class="empty"><div class="empty-icon">💬</div><div class="empty-text">No messages in this conversation</div></div>'; return; }
+        const container = document.createElement('div'); container.className = 'dm-list';
+        messages.forEach(m => {
+          const item = document.createElement('div'); item.className = 'dm-item'; item.id = 'dmitem-' + m.id;
+          let reelBadge = m.is_reel ? '<span class="reel-badge">🎬 Reel Shared</span><br>' : '';
+          item.innerHTML = `<div class="dm-meta"><span class="dm-user">${esc(m.from_name || 'User')}</span><span class="comment-time">${fmtDate(m.created_time)}</span></div>${reelBadge}<div class="dm-text">${esc(m.text || (m.is_reel ? '[Shared a Reel]' : '[No text]'))}</div><div id="dm-reply-area-${m.id}"></div><div class="dm-actions" id="dm-actions-${m.id}"></div>`;
+          const actionsDiv = item.querySelector('#dm-actions-' + m.id);
+          const genBtn = document.createElement('button'); genBtn.className = 'btn btn-secondary btn-sm'; genBtn.textContent = '✨ Generate Reply';
+          genBtn.onclick = () => generateDmReply(m.id, m.text || '', m.from_name || '', m.from_id || '', m.is_reel, m.reel_url || '', convoId);
+          actionsDiv.appendChild(genBtn);
+          container.appendChild(item);
+        });
+        msgList.innerHTML = ''; msgList.appendChild(container);
+      } catch (e) { msgList.innerHTML = `<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-text">${esc(e.message)}</div></div>`; toast(e.message, 'error'); }
+    }
+
+    async function generateDmReply(msgId, msgText, senderName, recipientId, isReel, reelUrl, convoId) {
+      const area = document.getElementById('dm-reply-area-' + msgId);
+      const actionsDiv = document.getElementById('dm-actions-' + msgId);
+      area.innerHTML = '<div class="loading-overlay" style="padding:10px 0"><div class="spin-dark"></div> Gemini is thinking…</div>';
+      try {
+        const res = await fetch('/api/dm/generate-reply', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message_text: msgText, sender_name: senderName, reel_url: reelUrl }) });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        area.innerHTML = '';
+        const replyBox = document.createElement('div'); replyBox.style.marginBottom = '10px';
+        const lbl = document.createElement('div'); lbl.className = 'dm-reply-label'; lbl.textContent = '✨ Gemini DM Reply';
+        const replyEl = document.createElement('div'); replyEl.className = 'dm-reply-preview'; replyEl.id = 'dm-reply-text-' + msgId; replyEl.contentEditable = 'true'; replyEl.textContent = data.reply;
+        replyBox.appendChild(lbl); replyBox.appendChild(replyEl); area.appendChild(replyBox);
+        actionsDiv.innerHTML = '';
+        const sendBtn = document.createElement('button'); sendBtn.className = 'btn btn-purple btn-sm'; sendBtn.textContent = '📤 Send DM Reply';
+        sendBtn.onclick = () => sendDmReply(msgId, recipientId, convoId, senderName, msgText, reelUrl);
+        const regenBtn = document.createElement('button'); regenBtn.className = 'btn btn-secondary btn-sm'; regenBtn.textContent = '🔄 Regenerate';
+        regenBtn.onclick = () => generateDmReply(msgId, msgText, senderName, recipientId, isReel, reelUrl, convoId);
+        actionsDiv.appendChild(sendBtn); actionsDiv.appendChild(regenBtn);
+      } catch (e) { area.innerHTML = `<div style="color:var(--red);font-size:0.85rem;padding:8px 0">Error: ${esc(e.message)}</div>`; toast(e.message, 'error'); }
+    }
+
+    async function sendDmReply(msgId, recipientId, convoId, senderName, msgText, reelUrl) {
+      const replyEl = document.getElementById('dm-reply-text-' + msgId);
+      if (!replyEl) { toast('Reply box not found', 'error'); return; }
+      const replyText = replyEl.innerText.trim();
+      if (!replyText) { toast('Reply is empty', 'error'); return; }
+      const actionsDiv = document.getElementById('dm-actions-' + msgId);
+      const sendBtn = actionsDiv ? actionsDiv.querySelector('.btn-purple') : null;
+      if (sendBtn) { sendBtn.disabled = true; sendBtn.textContent = '⏳ Sending…'; }
+      try {
+        const res = await fetch('/api/dm/send-reply', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ recipient_id: recipientId, conversation_id: convoId, reply_text: replyText, message_text: msgText, sender_name: senderName, reel_url: reelUrl }) });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to send DM');
+        const item = document.getElementById('dmitem-' + msgId);
+        if (item) { item.style.opacity = '0.5'; item.style.pointerEvents = 'none'; }
+        toast('DM sent & logged! ✅', 'success');
+      } catch (e) { toast('Error: ' + e.message, 'error'); if (sendBtn) { sendBtn.disabled = false; sendBtn.textContent = '📤 Send DM Reply'; } }
+    }
+
+    // ── Logs ───────────────────────────────────────────────────────────────
+    async function loadLogs() {
+      const body = document.getElementById('logsTableBody');
+      body.innerHTML = '<tr><td colspan="6"><div class="loading-overlay"><div class="spin-dark"></div> Loading…</div></td></tr>';
+      try {
+        const res = await fetch('/api/logs');
+        const data = await res.json();
+        const logs = data.logs || [];
+        if (!logs.length) { body.innerHTML = '<tr><td colspan="6"><div class="empty" style="padding:32px"><div class="empty-icon">📋</div><div class="empty-text">No logs yet</div></div></td></tr>'; return; }
+        body.innerHTML = logs.map(r => `<tr><td style="color:var(--ink2)">${r.id}</td><td><code style="font-size:0.78rem">${esc(r.post_id)}</code></td><td><strong>@${esc(r.commenter)}</strong></td><td class="truncate" style="max-width:160px">${esc(r.comment_text)}</td><td class="truncate" style="max-width:200px">${esc(r.reply_text)}</td><td style="color:var(--ink2);font-size:0.8rem;white-space:nowrap">${fmtDate(r.created_at)}</td></tr>`).join('');
+      } catch (e) { body.innerHTML = `<tr><td colspan="6" style="padding:16px;color:var(--red)">Error: ${esc(e.message)}</td></tr>`; }
+    }
+
+    async function loadDmLogs() {
+      const body = document.getElementById('dmLogsTableBody');
+      body.innerHTML = '<tr><td colspan="6"><div class="loading-overlay"><div class="spin-dark"></div> Loading…</div></td></tr>';
+      try {
+        const res = await fetch('/api/dm/logs');
+        const data = await res.json();
+        const logs = data.logs || [];
+        if (!logs.length) { body.innerHTML = '<tr><td colspan="6"><div class="empty" style="padding:32px"><div class="empty-icon">📨</div><div class="empty-text">No DM logs yet</div></div></td></tr>'; return; }
+        body.innerHTML = logs.map(r => `<tr><td style="color:var(--ink2)">${r.id}</td><td><strong>${esc(r.sender_name)}</strong></td><td class="truncate" style="max-width:160px">${esc(r.message_text)}</td><td class="truncate" style="max-width:200px">${esc(r.reply_text)}</td><td>${r.reel_url ? '🎬' : '—'}</td><td style="color:var(--ink2);font-size:0.8rem;white-space:nowrap">${fmtDate(r.created_at)}</td></tr>`).join('');
+      } catch (e) { body.innerHTML = `<tr><td colspan="6" style="padding:16px;color:var(--red)">Error: ${esc(e.message)}</td></tr>`; }
+    }
+
+    // ── Utils ──────────────────────────────────────────────────────────────
+    function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+    function fmtDate(dt) { if (!dt) return '—'; try { return new Date(dt).toLocaleString(); } catch { return dt; } }
+
+    loadStats();
+  </script>
+</body>
+
+</html>
