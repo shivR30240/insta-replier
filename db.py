@@ -1,6 +1,5 @@
 """
-db.py — Cloud SQL (MySQL) connection + helpers
-Now includes dm_logs table for DM reply tracking.
+db.py — Cloud SQL (MySQL) with auto-reply settings support
 """
 
 import os
@@ -14,30 +13,20 @@ def _get_engine():
     global _engine
     if _engine:
         return _engine
-
     host = os.getenv("CLOUD_SQL_HOST", "127.0.0.1")
     port = os.getenv("CLOUD_SQL_PORT", "3306")
     user = os.getenv("CLOUD_SQL_USER", "root")
     password = os.getenv("CLOUD_SQL_PASSWORD", "")
     database = os.getenv("CLOUD_SQL_DATABASE", "insta_replier")
-
     url = f"mysql+pymysql://{user}:{password}@{host}:{port}/{database}?charset=utf8mb4"
-    _engine = create_engine(
-        url,
-        poolclass=QueuePool,
-        pool_size=5,
-        max_overflow=10,
-        pool_pre_ping=True,
-    )
+    _engine = create_engine(url, poolclass=QueuePool,
+                            pool_size=5, max_overflow=10, pool_pre_ping=True)
     return _engine
 
 
 def init_db():
-    """Create all tables if they don't exist."""
     engine = _get_engine()
     with engine.connect() as conn:
-
-        # Comment reply logs (existing)
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS reply_logs (
                 id              INT AUTO_INCREMENT PRIMARY KEY,
@@ -53,8 +42,6 @@ def init_db():
                 INDEX idx_created_at (created_at)
             ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
         """))
-
-        # Post context cache (existing)
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS post_cache (
                 post_id         VARCHAR(64)  PRIMARY KEY,
@@ -65,8 +52,6 @@ def init_db():
                 cached_at       DATETIME DEFAULT CURRENT_TIMESTAMP
             ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
         """))
-
-        # NEW: DM reply logs
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS dm_logs (
                 id              INT AUTO_INCREMENT PRIMARY KEY,
@@ -82,9 +67,16 @@ def init_db():
                 INDEX idx_dm_created (created_at)
             ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
         """))
-
+        # Settings table for auto-reply toggle per post
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS settings (
+                key_name        VARCHAR(128) PRIMARY KEY,
+                value           TEXT,
+                updated_at      DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
+        """))
         conn.commit()
-    print("[DB] Tables ready (reply_logs, post_cache, dm_logs).")
+    print("[DB] All tables ready.")
 
 
 # ── Comment log helpers ────────────────────────────────────────────────────
@@ -101,14 +93,10 @@ def save_reply_log(*, post_id, comment_id, commenter, comment_text,
                 (:post_id, :comment_id, :commenter, :comment_text,
                  :reply_text, :post_context, :ig_reply_id)
             ON DUPLICATE KEY UPDATE
-                reply_text  = VALUES(reply_text),
-                ig_reply_id = VALUES(ig_reply_id)
-        """), {
-            "post_id": post_id, "comment_id": comment_id,
-            "commenter": commenter, "comment_text": comment_text,
-            "reply_text": reply_text, "post_context": post_context,
-            "ig_reply_id": ig_reply_id,
-        })
+                reply_text=VALUES(reply_text), ig_reply_id=VALUES(ig_reply_id)
+        """), {"post_id": post_id, "comment_id": comment_id, "commenter": commenter,
+               "comment_text": comment_text, "reply_text": reply_text,
+               "post_context": post_context, "ig_reply_id": ig_reply_id})
         conn.commit()
 
 
@@ -116,11 +104,8 @@ def get_all_logs(limit=200):
     engine = _get_engine()
     with engine.connect() as conn:
         rows = conn.execute(text("""
-            SELECT id, post_id, commenter, comment_text, reply_text,
-                   ig_reply_id, created_at
-            FROM reply_logs
-            ORDER BY created_at DESC
-            LIMIT :limit
+            SELECT id, post_id, commenter, comment_text, reply_text, ig_reply_id, created_at
+            FROM reply_logs ORDER BY created_at DESC LIMIT :limit
         """), {"limit": limit}).fetchall()
     return [dict(r._mapping) for r in rows]
 
@@ -130,22 +115,14 @@ def get_stats():
     with engine.connect() as conn:
         total = conn.execute(text("SELECT COUNT(*) FROM reply_logs")).scalar()
         today = conn.execute(text(
-            "SELECT COUNT(*) FROM reply_logs WHERE DATE(created_at) = CURDATE()"
-        )).scalar()
-        posts = conn.execute(text(
-            "SELECT COUNT(DISTINCT post_id) FROM reply_logs"
-        )).scalar()
+            "SELECT COUNT(*) FROM reply_logs WHERE DATE(created_at)=CURDATE()")).scalar()
+        posts = conn.execute(
+            text("SELECT COUNT(DISTINCT post_id) FROM reply_logs")).scalar()
         dm_total = conn.execute(text("SELECT COUNT(*) FROM dm_logs")).scalar()
-        dm_today = conn.execute(text(
-            "SELECT COUNT(*) FROM dm_logs WHERE DATE(created_at) = CURDATE()"
-        )).scalar()
-    return {
-        "total_replies":  total,
-        "replies_today":  today,
-        "posts_handled":  posts,
-        "dm_total":       dm_total,
-        "dm_today":       dm_today,
-    }
+        dm_today = conn.execute(
+            text("SELECT COUNT(*) FROM dm_logs WHERE DATE(created_at)=CURDATE()")).scalar()
+    return {"total_replies": total, "replies_today": today, "posts_handled": posts,
+            "dm_total": dm_total, "dm_today": dm_today}
 
 
 def cache_post(post_id, caption, media_type, transcript, summary):
@@ -154,10 +131,8 @@ def cache_post(post_id, caption, media_type, transcript, summary):
         conn.execute(text("""
             INSERT INTO post_cache (post_id, caption, media_type, transcript, summary)
             VALUES (:post_id, :caption, :media_type, :transcript, :summary)
-            ON DUPLICATE KEY UPDATE
-                caption=VALUES(caption), media_type=VALUES(media_type),
-                transcript=VALUES(transcript), summary=VALUES(summary),
-                cached_at=NOW()
+            ON DUPLICATE KEY UPDATE caption=VALUES(caption), media_type=VALUES(media_type),
+                transcript=VALUES(transcript), summary=VALUES(summary), cached_at=NOW()
         """), {"post_id": post_id, "caption": caption, "media_type": media_type,
                "transcript": transcript, "summary": summary})
         conn.commit()
@@ -166,9 +141,8 @@ def cache_post(post_id, caption, media_type, transcript, summary):
 def get_cached_post(post_id):
     engine = _get_engine()
     with engine.connect() as conn:
-        row = conn.execute(text(
-            "SELECT * FROM post_cache WHERE post_id = :pid"
-        ), {"pid": post_id}).fetchone()
+        row = conn.execute(
+            text("SELECT * FROM post_cache WHERE post_id=:pid"), {"pid": post_id}).fetchone()
     return dict(row._mapping) if row else None
 
 
@@ -185,15 +159,10 @@ def save_dm_log(*, conversation_id, recipient_id, sender_name,
             VALUES
                 (:conversation_id, :recipient_id, :sender_name,
                  :message_text, :reply_text, :reel_url, :ig_message_id)
-        """), {
-            "conversation_id": conversation_id,
-            "recipient_id":    recipient_id,
-            "sender_name":     sender_name,
-            "message_text":    message_text,
-            "reply_text":      reply_text,
-            "reel_url":        reel_url or "",
-            "ig_message_id":   ig_message_id,
-        })
+        """), {"conversation_id": conversation_id, "recipient_id": recipient_id,
+               "sender_name": sender_name, "message_text": message_text,
+               "reply_text": reply_text, "reel_url": reel_url or "",
+               "ig_message_id": ig_message_id})
         conn.commit()
 
 
@@ -203,8 +172,43 @@ def get_all_dm_logs(limit=200):
         rows = conn.execute(text("""
             SELECT id, conversation_id, sender_name, message_text,
                    reply_text, reel_url, ig_message_id, created_at
-            FROM dm_logs
-            ORDER BY created_at DESC
-            LIMIT :limit
+            FROM dm_logs ORDER BY created_at DESC LIMIT :limit
         """), {"limit": limit}).fetchall()
     return [dict(r._mapping) for r in rows]
+
+
+# ── Settings / Auto-reply helpers ──────────────────────────────────────────
+
+def get_setting(key, default=None):
+    engine = _get_engine()
+    try:
+        with engine.connect() as conn:
+            row = conn.execute(text("SELECT value FROM settings WHERE key_name=:k"), {
+                               "k": key}).fetchone()
+        return row[0] if row else default
+    except Exception:
+        return default
+
+
+def set_setting(key, value):
+    engine = _get_engine()
+    with engine.connect() as conn:
+        conn.execute(text("""
+            INSERT INTO settings (key_name, value) VALUES (:k, :v)
+            ON DUPLICATE KEY UPDATE value=VALUES(value), updated_at=NOW()
+        """), {"k": key, "v": str(value)})
+        conn.commit()
+
+
+def is_auto_reply_enabled():
+    return get_setting("auto_reply_enabled", "false").lower() == "true"
+
+
+def is_comment_already_replied(comment_id):
+    """Check if we already replied to this comment (prevents duplicates)."""
+    engine = _get_engine()
+    with engine.connect() as conn:
+        count = conn.execute(text(
+            "SELECT COUNT(*) FROM reply_logs WHERE comment_id=:cid"
+        ), {"cid": comment_id}).scalar()
+    return count > 0

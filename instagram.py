@@ -1,8 +1,5 @@
 """
 instagram.py — Instagram Graph API helpers
-Requires env vars:
-  IG_ACCESS_TOKEN   — long-lived page/user access token
-  IG_USER_ID        — your Instagram Business / Creator account ID
 """
 
 import os
@@ -19,14 +16,54 @@ def _token():
     return t
 
 
-# ── Post context (caption + media type) ───────────────────────────────────
+def _ig_user_id():
+    uid = os.getenv("IG_USER_ID", "")
+    if not uid:
+        raise ValueError("IG_USER_ID not set in .env")
+    return uid
+
+
+# ── Fetch your recent posts automatically ──────────────────────────────────
+
+def get_recent_posts(limit=12):
+    """
+    Fetch the account's recent posts automatically.
+    Uses the correct Facebook Graph API endpoint for Instagram Business accounts.
+    """
+    url = f"{BASE}/{_ig_user_id()}/media"
+    params = {
+        "fields": "id,caption,media_type,thumbnail_url,media_url,permalink,timestamp",
+        "access_token": _token(),
+        "limit": limit,
+    }
+
+    try:
+        resp = requests.get(url, params=params, timeout=15)
+        resp.raise_for_status()
+        data = resp.json()
+    except requests.exceptions.HTTPError as e:
+        # Try fallback with fewer fields if thumbnail_url causes issues
+        params["fields"] = "id,caption,media_type,permalink,timestamp"
+        resp = requests.get(url, params=params, timeout=15)
+        resp.raise_for_status()
+        data = resp.json()
+
+    posts = []
+    for p in data.get("data", []):
+        posts.append({
+            "id":            p.get("id"),
+            "caption":       (p.get("caption") or "")[:120],
+            "media_type":    p.get("media_type", "IMAGE"),
+            "thumbnail_url": p.get("thumbnail_url") or p.get("media_url", ""),
+            "permalink":     p.get("permalink", ""),
+            "timestamp":     p.get("timestamp", ""),
+        })
+    return posts
+
+
+# ── Post context (caption + transcript) ───────────────────────────────────
 
 def get_post_context(post_id: str) -> dict:
-    """
-    Returns caption, media_type, transcript (if video), and a summary string.
-    Caches the result in Cloud SQL so we don't hit the API repeatedly.
-    """
-    # Check cache first
     cached = get_cached_post(post_id)
     if cached:
         return cached
@@ -41,12 +78,10 @@ def get_post_context(post_id: str) -> dict:
     data = resp.json()
 
     caption = data.get("caption", "")
-    # IMAGE | VIDEO | CAROUSEL_ALBUM
     media_type = data.get("media_type", "IMAGE")
     permalink = data.get("permalink", "")
     transcript = ""
 
-    # If it's a video/reel, transcribe the audio using insta-app logic
     if media_type == "VIDEO" and permalink:
         try:
             import sys
@@ -58,7 +93,6 @@ def get_post_context(post_id: str) -> dict:
         except Exception as e:
             transcript = f"(Transcription unavailable: {e})"
 
-    # Build a plain-English summary for Gemini context
     parts = []
     if caption:
         parts.append(f"Caption: {caption}")
@@ -82,7 +116,6 @@ def get_post_context(post_id: str) -> dict:
 # ── Fetch comments ─────────────────────────────────────────────────────────
 
 def fetch_post_comments(post_id: str) -> list:
-    """Returns list of {id, text, username, timestamp}."""
     url = f"{BASE}/{post_id}/comments"
     params = {
         "fields": "id,text,username,timestamp",
@@ -100,16 +133,14 @@ def fetch_post_comments(post_id: str) -> list:
                 "username":  c.get("username", ""),
                 "timestamp": c.get("timestamp", ""),
             })
-        # Pagination
         url = data.get("paging", {}).get("next")
-        params = {}   # next URL already has token embedded
+        params = {}
     return comments
 
 
 # ── Post a reply ───────────────────────────────────────────────────────────
 
 def post_reply(comment_id: str, message: str) -> dict:
-    """Reply to a comment. Returns the API response dict."""
     url = f"{BASE}/{comment_id}/replies"
     resp = requests.post(url, data={
         "message":      message,
