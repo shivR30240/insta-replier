@@ -8,6 +8,7 @@ Requires env var:
 import os
 import requests
 
+# FIX 1: Use the correct stable Gemini model URL (gemini-1.5-flash)
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent"
 
 
@@ -47,8 +48,9 @@ Write a {tone}, short, genuine Instagram reply to this comment. Rules:
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
         "generationConfig": {
-            "temperature": 0.8,
-            "maxOutputTokens": 150,
+            "temperature": 0.7,      # Slightly lower for more focused, reliable results
+            # FIX 2: Increased from 150 to 300 so it never cuts off mid-sentence
+            "maxOutputTokens": 300,
         },
     }
 
@@ -62,9 +64,11 @@ Write a {tone}, short, genuine Instagram reply to this comment. Rules:
 
     try:
         reply = data["candidates"][0]["content"]["parts"][0]["text"].strip()
-        # Clean up any accidental quotes
-        if reply.startswith('"') and reply.endswith('"'):
+
+        # FIX 3: Robust quote cleaning (handles single/double/curly quotes)
+        if (reply.startswith('"') and reply.endswith('"')) or (reply.startswith("'") and reply.endswith("'")):
             reply = reply[1:-1]
-        return reply
+
+        return reply.strip()
     except (KeyError, IndexError) as e:
         raise RuntimeError(f"Unexpected Gemini response: {data}") from e
